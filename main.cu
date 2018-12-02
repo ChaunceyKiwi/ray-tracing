@@ -1,5 +1,8 @@
 #include <iostream>
+#include <time.h>
 using namespace std;
+
+// limited version of checkCudaErrors from helper_cuda.h in CUDA examples 
 #define checkCudaErrors(val) check_cuda((val), #val, __FILE__, __LINE__)
 
 void check_cuda(cudaError_t result, char const *const func,
@@ -41,12 +44,17 @@ int main() {
   float *fb;
   checkCudaErrors(cudaMallocManaged((void **)&fb, fb_size));
 
+  clock_t start, stop;
+  start = clock();
   // render our buffer
   dim3 blocks(nx / tx + 1, ny / ty + 1);
   dim3 threads(tx, ty);
   render<<<blocks, threads>>>(fb, nx, ny);
   checkCudaErrors(cudaGetLastError());
   checkCudaErrors(cudaDeviceSynchronize());
+  stop = clock();
+  double timer_seconds = ((double)(stop - start)) / CLOCKS_PER_SEC;
+  cerr << "took " << timer_seconds << " seconds.\n";
 
   cout << "P3\n" << nx << " " << ny << "\n255\n";
   for (int j = ny - 1; j >= 0; j--) {
