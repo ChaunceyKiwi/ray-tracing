@@ -31,7 +31,7 @@ __device__ bool sphere::hit(const ray& r, float t_min, float t_max,
       rec.mat_ptr = mat_ptr;
       return true;
     }
-    temp = (-b + sqrt(b * b - a * c)) / a;
+    temp = (-b + sqrt(discriminant)) / (2.0 * a);
     if (temp < t_max && temp > t_min) {
       rec.t = temp;
       rec.p = r.point_at_parameter(rec.t);
