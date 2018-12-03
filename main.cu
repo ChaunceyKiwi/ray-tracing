@@ -7,6 +7,7 @@
 #include "sphere.h"
 #include "hitable_list.h"
 #include "camera.h"
+#include "material.h"
 
 using namespace std;
 
@@ -24,19 +25,32 @@ void check_cuda(cudaError_t result, char const *const func,
   }
 }
 
-__device__ vec3 color(const ray& r, hitable **world) {
-  hit_record rec;
+__device__ vec3 color(const ray& r, hitable **world, 
+                      curandState *local_rand_state) {
+  ray cur_ray = r;
+  vec3 cur_attenuation = vec3(1.0, 1.0, 1.0);
 
-  if ((*world)->hit(r, 0.0, FLT_MAX, rec)) {
-    return 0.5 *
-      vec3(rec.normal.x() + 1.0f, rec.normal.y() + 1.0f, rec.normal.z() + 1.0f);
-  } else {
-    vec3 unit_direction = unit_vector(r.direction());
-
-    // y is in [-1, 1], thus t is in [0, 1]
-    float t = 0.5f * (unit_direction.y() + 1.0f);
-    return (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+  for (int i = 0; i < 50; i++) {
+    hit_record rec;
+    if ((*world)->hit(cur_ray, 0.001f, FLT_MAX, rec)) {
+      ray scattered;
+      vec3 attenuation;
+      if (rec.mat_ptr->scatter(cur_ray, rec, attenuation, scattered, 
+          local_rand_state)) {
+        cur_attenuation *= attenuation;
+        cur_ray = scattered;
+      } else {
+        return vec3(0.0, 0.0, 0.0);
+      }
+    } else {
+      vec3 unit_direction = unit_vector(cur_ray.direction());  
+      float t = 0.5f * (unit_direction.y() + 1.0f);
+      vec3 c = (1.0f - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0);
+      return cur_attenuation * c;
+    }
   }
+
+  return vec3(0.0, 0.0, 0.0); // exceed recursion
 }
 
 __global__ void render_init(int max_x, int max_y, curandState *rand_state) {
@@ -65,26 +79,38 @@ __global__ void render(vec3 *fb, int max_x, int max_y, int ns, camera **cam,
     float u = float(i + curand_uniform(&local_rand_state)) / float(max_x);
     float v = float(j + curand_uniform(&local_rand_state)) / float(max_y);
     ray r = (*cam)->get_ray(u, v);
-    col += color(r, world);
+    col += color(r, world, &local_rand_state);
   }
-
-  fb[pixel_index] = col / float(ns);
+  rand_state[pixel_index] = local_rand_state;
+  col /= float(ns);
+  col[0] = sqrt(col[0]);
+  col[1] = sqrt(col[1]);
+  col[2] = sqrt(col[2]);
+  fb[pixel_index] = col;
 }
 
 __global__ void create_world(hitable **d_list, hitable **d_world, 
                               camera **d_camera) {
   if (threadIdx.x == 0 && blockIdx.x == 0) {
-    *(d_list) = new sphere(vec3(0, 0, -1), 0.5);
-    *(d_list + 1) = new sphere(vec3(0, -100.5, -1), 100);
-    *d_world = new hitable_list(d_list, 2);
+    d_list[0] = new sphere(vec3(0, 0, -1), 0.5,
+                            new lambertian(vec3(0.8, 0.3, 0.3)));
+    d_list[1] = new sphere(vec3(0, -100.5, -1), 100, 
+                            new lambertian(vec3(0.8, 0.8, 0.0)));
+    d_list[2] = new sphere(vec3(1, 0, -1), 0.5, 
+                            new metal(vec3(0.8, 0.6, 0.2), 1.0));
+    d_list[3] = new sphere(vec3(-1, 0, -1), 0.5, 
+                            new metal(vec3(0.8, 0.8, 0.8), 0.3));
+    *d_world = new hitable_list(d_list, 4);
     *d_camera = new camera();
   }
 }
 
 __global__ void free_world(hitable **d_list, hitable **d_world,
                             camera ** d_camera) {
-  delete *(d_list);
-  delete *(d_list + 1);
+  for (int i = 0; i < 4; i++) {
+    delete ((sphere*)d_list[i])->mat_ptr;
+    delete d_list[i];
+  }
   delete *d_world;
   delete *d_camera;
 }
@@ -97,7 +123,8 @@ int main() {
   int tx = 8;
   int ty = 8;
 
-  std::cerr << "Rendering a " << nx << "*" << ny << " image";
+  std::cerr << "Rendering a " << nx << "*" << ny << " image with " << ns
+            << " samples per pixel";
   std::cerr << "in " << tx << "*" << ty << " blocks." << endl;
 
   int num_pixels = nx * ny;
