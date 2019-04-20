@@ -7,6 +7,7 @@ class sphere : public hitable {
  public:
   sphere(){};
   sphere(vec3 cen, float r, material* m) : center(cen), radius(r), mat_ptr(m){};
+  bool bounding_box(float t0, float t1, aabb& box) const;
   virtual bool hit(const ray& r, float t_min, float t_max,
                    hit_record& rec) const;
   vec3 center;
@@ -40,6 +41,12 @@ bool sphere::hit(const ray& r, float t_min, float t_max,
     }
   }
   return false;
+}
+
+bool sphere::bounding_box(float t0, float t1, aabb& box) const {
+  box = aabb(center - vec3(radius, radius, radius), 
+             center - vec3(radius, radius, radius));
+  return true;
 }
 
 #endif

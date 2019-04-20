@@ -13,6 +13,7 @@ class moving_sphere : public hitable {
         time1(t1),
         radius(r),
         mat_ptr(m){};
+  bool bounding_box(float t0, float t1, aabb& box) const;
   virtual bool hit(const ray& r, float t_min, float t_max,
                    hit_record& rec) const;
   vec3 center(float time) const;
@@ -27,7 +28,7 @@ vec3 moving_sphere::center(float time) const {
 }
 
 bool moving_sphere::hit(const ray& r, float t_min, float t_max,
-                 hit_record& rec) const {
+                        hit_record& rec) const {
   vec3 oc = r.origin() - center(r.time());
   float a = dot(r.direction(), r.direction());
   float b = 2.0 * dot(oc, r.direction());
@@ -52,6 +53,15 @@ bool moving_sphere::hit(const ray& r, float t_min, float t_max,
     }
   }
   return false;
+}
+
+bool moving_sphere::bounding_box(float t0, float t1, aabb& box) const {
+  aabb box1 = aabb(center0 - vec3(radius, radius, radius),
+                   center0 - vec3(radius, radius, radius));
+  aabb box2 = aabb(center0 - vec3(radius, radius, radius),
+                   center0 - vec3(radius, radius, radius));
+  box = surrounding_box(box1, box2);
+  return true;
 }
 
 #endif
