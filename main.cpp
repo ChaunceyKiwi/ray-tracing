@@ -1,4 +1,5 @@
 #include <iostream>
+#include "aarect.h"
 #include "camera.h"
 #include "float.h"
 #include "hitable_list.h"
@@ -6,7 +7,6 @@
 #include "material.h"
 #include "moving_sphere.h"
 #include "sphere.h"
-#include "aarect.h"
 using namespace std;
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -101,20 +101,39 @@ hitable* simple_light() {
   return new hitable_list(list, 4);
 }
 
+hitable* cornell_box() {
+  hitable** list = new hitable*[6];
+  int i = 0;
+  material* red = new lambertian(new constant_texture(vec3(0.65, 0.05, 0.05)));
+  material* white =
+      new lambertian(new constant_texture(vec3(0.73, 0.73, 0.73)));
+  material* green =
+      new lambertian(new constant_texture(vec3(0.12, 0.45, 0.15)));
+  material* light = new diffuse_light(new constant_texture(vec3(15, 15, 15)));
+  list[i++] = new flip_normals(new yz_rect(0, 555, 0, 555, 555, green));
+  list[i++] = new yz_rect(0, 555, 0, 555, 0, red);
+  list[i++] = new xz_rect(213, 343, 227, 332, 554, light);
+  list[i++] = new flip_normals(new xz_rect(0, 555, 0, 555, 555, white));
+  list[i++] = new xz_rect(0, 555, 0, 555, 0, white);
+  list[i++] = new flip_normals(new xy_rect(0, 555, 0, 555, 555, white));
+  return new hitable_list(list, i);
+}
+
 int main() {
   int nx = 960;
   int ny = 640;
-  int ns = 10;
+  int ns = 20;
   cout << "P3\n" << nx << " " << ny << "\n255\n";
 
-  hitable* world = simple_light();
+  hitable* world = cornell_box();
 
-  vec3 lookfrom(26,4, 6);
-  vec3 lookat(0, 0, 0);
+  vec3 lookfrom(278, 278, -800);
+  vec3 lookat(278, 278, 0);
   float dist_to_focus = 10.0;
   float apeture = 0.0;
+  float vfov = 40.0;
 
-  camera cam(lookfrom, lookat, vec3(0, 1, 0), 20, float(nx) / float(ny),
+  camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny),
              apeture, dist_to_focus, 0.0, 1.0);
   for (int j = ny - 1; j >= 0; j--) {
     for (int i = 0; i < nx; i++) {

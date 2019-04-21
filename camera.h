@@ -38,8 +38,10 @@ class camera {
     vec3 rd = lens_radius * random_in_unit_disk();
     vec3 offset = u * rd.x() + v * rd.y();
     float time = time0 + drand48() * (time1 - time0);
-    return ray(origin + offset, lower_left_corner + s * horizontal +
-                                    t * vertical - origin - offset, time);
+    return ray(
+        origin + offset,
+        lower_left_corner + s * horizontal + t * vertical - origin - offset,
+        time);
   }
 
   vec3 origin;
@@ -47,7 +49,7 @@ class camera {
   vec3 horizontal;
   vec3 vertical;
   vec3 u, v, w;
-  float time0, time1; // shutter open/close times
+  float time0, time1;  // shutter open/close times
   float lens_radius;
 };
 

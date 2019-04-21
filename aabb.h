@@ -1,8 +1,11 @@
 #ifndef AABBH
 #define AABBH
 
-inline float ffmin(float a, float b) {return a < b ? a : b;}
-inline float ffmax(float a, float b) {return a > b ? b : a;}
+inline float ffmin(float a, float b) { return a < b ? a : b; }
+inline float ffmax(float a, float b) { return a > b ? b : a; }
+
+#include "hitable.h"
+#include "ray.h"
 
 class aabb {
  public:
@@ -19,7 +22,7 @@ class aabb {
 };
 
 inline bool aabb::hit(const ray& r, float tmin, float tmax) const {
-  for (int a  = 0; a < 3; a++) {
+  for (int a = 0; a < 3; a++) {
     float invD = 1.0f / r.direction()[a];
     float t0 = (min()[a] - r.origin()[a]) * invD;
     float t1 = (max()[a] - r.origin()[a]) * invD;
