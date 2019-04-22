@@ -198,7 +198,8 @@ hitable* final() {
   list[l++] = new constant_medium(boundary, 0.0001,
                                   new constant_texture(vec3(1.0, 1.0, 1.0)));
   int nx, ny, nn;
-  unsigned char* tex_data = stbi_load("earthmap.jpg", &nx, &ny, &nn, 0);
+  unsigned char* tex_data =
+      stbi_load("./assets/earthmap.jpg", &nx, &ny, &nn, 0);
   material* emat = new lambertian(new image_texture(tex_data, nx, ny));
   list[l++] = new sphere(vec3(400, 200, 400), 100, emat);
   texture* pertext = new noise_texture(0.1);
@@ -215,14 +216,14 @@ hitable* final() {
 }
 
 int main() {
-  int nx = 960;
-  int ny = 640;
-  int ns = 10;
+  int nx = 400;
+  int ny = 400;
+  int ns = 100;
   cout << "P3\n" << nx << " " << ny << "\n255\n";
 
   hitable* world = final();
 
-  vec3 lookfrom(278, 278, -800);
+  vec3 lookfrom(478, 278, -600);
   vec3 lookat(278, 278, 0);
   float dist_to_focus = 10.0;
   float apeture = 0.0;
