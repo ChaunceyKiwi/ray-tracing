@@ -1,6 +1,11 @@
 #ifndef CONSTANTMEDIUMH
 #define CONSTANTMEDIUMH
 
+#include "material.h"
+#include "texture.h"
+#include "hitable.h"
+#include <float.h>
+
 class constant_medium : public hitable {
  public:
   constant_medium(hitable* b, float d, texture* a) : boundary(b), density(d) {
