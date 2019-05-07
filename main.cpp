@@ -130,8 +130,8 @@ hitable* cornell_box() {
 }
 
 int main() {
-  int nx = 500;
-  int ny = 500;
+  int nx = 200;
+  int ny = 200;
   int ns = 200;
   cout << "P3\n" << nx << " " << ny << "\n255\n";
 
