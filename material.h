@@ -6,8 +6,14 @@
 
 class material {
  public:
-  virtual bool scatter(const ray& r_in, const hit_record& rec,
-                       vec3& attenuation, ray& scattered) const = 0;
+  virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& albedo,
+                       ray& scattered, float& pdf) const {
+    return false;
+  }
+  virtual float scattering_pdf(const ray& r_in, const hit_record& rec,
+                               const ray& scattered) const {
+    return 0.0;
+  }
   virtual vec3 emitted(float u, float v, const vec3& p) const {
     return vec3(0, 0, 0);
   }
@@ -26,11 +32,24 @@ vec3 random_in_unit_sphere() {
 class lambertian : public material {
  public:
   lambertian(texture* a) : albedo(a) {}
-  virtual bool scatter(const ray& r_in, const hit_record& rec,
-                       vec3& attenuation, ray& scattered) const {
-    vec3 target = rec.p + rec.normal + random_in_unit_sphere();
-    scattered = ray(rec.p, target - rec.p, r_in.time());
-    attenuation = albedo->value(rec.u, rec.v, rec.p);
+  float scattering_pdf(const ray& r_in, const hit_record& rec,
+                       const ray& scattered) const {
+    float consine = dot(rec.normal, unit_vector(scattered.direction()));
+    if (consine < 0) {
+      consine = 0;
+    }
+    return consine / M_PI;
+  }
+  virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& alb,
+                       ray& scattered, float& pdf) const {
+    vec3 direction;
+    do {
+      direction = random_in_unit_sphere();
+    } while (dot(direction, rec.normal) < 0);
+
+    scattered = ray(rec.p, unit_vector(direction), r_in.time());
+    alb = albedo->value(rec.u, rec.v, rec.p);
+    pdf = 0.5 / M_PI;
     return true;
   }
   texture* albedo;

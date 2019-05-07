@@ -19,8 +19,11 @@ vec3 color(const ray& r, hitable* world, int depth) {
     ray scattered;
     vec3 attenuation;
     vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
-    if (depth < 50 && rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-      return emitted + attenuation * color(scattered, world, depth + 1);
+    float pdf;
+    vec3 albedo;
+    if (depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
+      return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) *
+                           color(scattered, world, depth + 1) / pdf;
     } else {
       return emitted;
     }
@@ -127,9 +130,9 @@ hitable* cornell_box() {
 }
 
 int main() {
-  int nx = 960;
-  int ny = 640;
-  int ns = 20;
+  int nx = 500;
+  int ny = 500;
+  int ns = 200;
   cout << "P3\n" << nx << " " << ny << "\n255\n";
 
   hitable* world = cornell_box();
