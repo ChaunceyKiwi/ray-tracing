@@ -170,7 +170,8 @@ int main() {
         float u = float(i + drand48()) / float(nx);
         float v = float(j + drand48()) / float(ny);
         ray r = cam->get_ray(u, v);
-        col += color(r, world, &hlist, 0);
+        vec3 p = r.point_at_parameter(2.0);
+        col += de_nan(color(r, world, &hlist, 0));
       }
 
       col /= float(ns);
