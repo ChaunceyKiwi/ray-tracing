@@ -27,6 +27,8 @@ class hitable {
   virtual bool hit(const ray& r, float t_min, float t_max,
                    hit_record& rec) const = 0;
   virtual bool bounding_box(float t0, float t1, aabb& box) const = 0;
+  virtual float pdf_value(const vec3& o, const vec3& v) const { return 0.0; }
+  virtual vec3 random(const vec3& o) const { return vec3(1, 0, 0); }
 };
 
 class translate : public hitable {
@@ -106,7 +108,8 @@ rotate_y::rotate_y(hitable* p, float angle) : ptr(p) {
   bbox = aabb(min, max);
 }
 
-bool rotate_y::hit(const ray& r, float t_min, float t_max, hit_record& rec) const {
+bool rotate_y::hit(const ray& r, float t_min, float t_max,
+                   hit_record& rec) const {
   vec3 origin = r.origin();
   vec3 direction = r.direction();
   origin[0] = cos_theta * r.origin()[0] - sin_theta * r.origin()[2];
@@ -119,8 +122,8 @@ bool rotate_y::hit(const ray& r, float t_min, float t_max, hit_record& rec) cons
     vec3 normal = rec.normal;
     p[0] = cos_theta * rec.p[0] + sin_theta * rec.p[2];
     p[2] = -sin_theta * rec.p[0] + cos_theta * rec.p[2];
-    normal[0]  = cos_theta * rec.normal[0] + sin_theta * rec.normal[2];
-    normal[2]  = -sin_theta * rec.normal[0] + cos_theta * rec.normal[2];
+    normal[0] = cos_theta * rec.normal[0] + sin_theta * rec.normal[2];
+    normal[2] = -sin_theta * rec.normal[0] + cos_theta * rec.normal[2];
     rec.p = p;
     rec.normal = normal;
     return true;

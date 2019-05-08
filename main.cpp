@@ -12,6 +12,7 @@ using namespace std;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#include "pdf.h"
 
 vec3 color(const ray& r, hitable* world, int depth) {
   hit_record rec;
@@ -21,9 +22,16 @@ vec3 color(const ray& r, hitable* world, int depth) {
     vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
     float pdf;
     vec3 albedo;
+    float pdf_val;
     if (depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
+      hitable *light_shape = new xz_rect(213, 343, 227, 332, 554, 0);
+      hitable_pdf p0(light_shape, rec.p);
+      cosine_pdf p1(rec.normal);
+      mixture_pdf p(&p0, &p1);
+      scattered = ray(rec.p, p.generate(), r.time());
+      pdf_val =  p.value(scattered.direction());
       return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) *
-                           color(scattered, world, depth + 1) / pdf;
+                           color(scattered, world, depth + 1) / pdf_val;
     } else {
       return emitted;
     }
@@ -132,7 +140,7 @@ hitable* cornell_box() {
 int main() {
   int nx = 200;
   int ny = 200;
-  int ns = 200;
+  int ns = 20;
   cout << "P3\n" << nx << " " << ny << "\n255\n";
 
   hitable* world = cornell_box();
