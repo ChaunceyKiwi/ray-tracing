@@ -11,31 +11,31 @@
 using namespace std;
 
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include "pdf.h"
+#include "stb_image.h"
 
-vec3 color(const ray& r, hitable* world, int depth) {
-  hit_record rec;
-  if (world->hit(r, 0.001, MAXFLOAT, rec)) {
-    ray scattered;
-    vec3 attenuation;
-    vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
-    float pdf;
-    vec3 albedo;
-    float pdf_val;
-    if (depth < 50 && rec.mat_ptr->scatter(r, rec, albedo, scattered, pdf)) {
-      hitable *light_shape = new xz_rect(213, 343, 227, 332, 554, 0);
-      hitable_pdf p0(light_shape, rec.p);
-      cosine_pdf p1(rec.normal);
-      mixture_pdf p(&p0, &p1);
-      scattered = ray(rec.p, p.generate(), r.time());
-      pdf_val =  p.value(scattered.direction());
-      return emitted + albedo * rec.mat_ptr->scattering_pdf(r, rec, scattered) *
-                           color(scattered, world, depth + 1) / pdf_val;
+vec3 color(const ray& r, hitable* world, hitable* light_shape, int depth) {
+  hit_record hrec;
+  if (world->hit(r, 0.001, MAXFLOAT, hrec)) {
+    scatter_record srec;
+    vec3 emitted = hrec.mat_ptr->emitted(r, hrec, hrec.u, hrec.v, hrec.p);
+    if (depth < 50 && hrec.mat_ptr->scatter(r, hrec, srec)) {
+      if (srec.is_specular) {
+        return srec.attenuation *
+               color(srec.specular_ray, world, light_shape, depth + 1);
+      } else {
+        hitable_pdf plight(light_shape, hrec.p);
+        mixture_pdf p(&plight, srec.pdf_ptr);
+        ray scattered = ray(hrec.p, p.generate(), r.time());
+        float pdf_val = p.value(scattered.direction());
+        return emitted + srec.attenuation *
+                             hrec.mat_ptr->scattering_pdf(r, hrec, scattered) *
+                             color(scattered, world, light_shape, depth + 1) /
+                             pdf_val;
+      }
     } else {
       return emitted;
     }
-
   } else {
     return vec3(0, 0, 0);
   }
@@ -113,7 +113,7 @@ hitable* simple_light() {
   return new hitable_list(list, 4);
 }
 
-hitable* cornell_box() {
+void cornell_box(hitable** scene, camera** cam, float aspect) {
   hitable** list = new hitable*[8];
   int i = 0;
   material* red = new lambertian(new constant_texture(vec3(0.65, 0.05, 0.05)));
@@ -131,36 +131,46 @@ hitable* cornell_box() {
   list[i++] = new translate(
       new rotate_y(new box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18),
       vec3(130, 0, 65));
+
+  material* aluminum = new metal(vec3(0.8, 0.85, 0.88), 0.0);
   list[i++] = new translate(
-      new rotate_y(new box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15),
+      new rotate_y(new box(vec3(0, 0, 0), vec3(165, 330, 165), aluminum), 15),
       vec3(265, 0, 295));
-  return new hitable_list(list, i);
-}
-
-int main() {
-  int nx = 200;
-  int ny = 200;
-  int ns = 20;
-  cout << "P3\n" << nx << " " << ny << "\n255\n";
-
-  hitable* world = cornell_box();
-
+  *scene = new hitable_list(list, i);
   vec3 lookfrom(278, 278, -800);
   vec3 lookat(278, 278, 0);
   float dist_to_focus = 10.0;
   float apeture = 0.0;
   float vfov = 40.0;
+  *cam = new camera(lookfrom, lookat, vec3(0, 1, 0), vfov, aspect, apeture,
+                    dist_to_focus, 0.0, 1.0);
+}
 
-  camera cam(lookfrom, lookat, vec3(0, 1, 0), vfov, float(nx) / float(ny),
-             apeture, dist_to_focus, 0.0, 1.0);
+int main() {
+  int nx = 500;
+  int ny = 500;
+  int ns = 10;
+  cout << "P3\n" << nx << " " << ny << "\n255\n";
+
+  hitable* world;
+  camera* cam;
+  float aspect = float(ny) / float(nx);
+  cornell_box(&world, &cam, aspect);
+  hitable *light_shape = new xz_rect(213, 343, 227, 332, 554, 0);
+  hitable *glass_sphere = new sphere(vec3(190, 90, 190), 90, 0);
+  hitable *a[2];
+  a[0] = light_shape;
+  a[1] = glass_sphere;
+  hitable_list hlist(a,2);
+
   for (int j = ny - 1; j >= 0; j--) {
     for (int i = 0; i < nx; i++) {
       vec3 col(0, 0, 0);
       for (int s = 0; s < ns; s++) {
         float u = float(i + drand48()) / float(nx);
         float v = float(j + drand48()) / float(ny);
-        ray r = cam.get_ray(u, v);
-        col += color(r, world, 0);
+        ray r = cam->get_ray(u, v);
+        col += color(r, world, &hlist, 0);
       }
 
       col /= float(ns);

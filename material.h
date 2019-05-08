@@ -1,21 +1,30 @@
 #ifndef MATERIALH
 #define MATERIALH
 
-#include "onb.h"
 #include "ray.h"
 #include "texture.h"
+#include "onb.h"
+#include "pdf.h"
+
+struct scatter_record {
+  ray specular_ray;
+  bool is_specular;
+  vec3 attenuation;
+  pdf* pdf_ptr;
+};
 
 class material {
  public:
-  virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& albedo,
-                       ray& scattered, float& pdf) const {
+  virtual bool scatter(const ray& r_in, const hit_record& hrec,
+                       scatter_record& srec) const {
     return false;
   }
   virtual float scattering_pdf(const ray& r_in, const hit_record& rec,
                                const ray& scattered) const {
     return 0.0;
   }
-  virtual vec3 emitted(float u, float v, const vec3& p) const {
+  virtual vec3 emitted(const ray& r_in, const hit_record& rec, float u, float v,
+                       const vec3& p) const {
     return vec3(0, 0, 0);
   }
 };
@@ -30,16 +39,6 @@ vec3 random_in_unit_sphere() {
   return p;
 }
 
-inline vec3 random_cosine_direction() {
-  float r1 = drand48();
-  float r2 = drand48();
-  float z = sqrt(1 - r2);
-  float phi = 2 * M_PI * r1;
-  float x = cos(phi) * 2 * sqrt(r2);
-  float y = sin(phi) * 2 * sqrt(r2);
-  return vec3(x, y, z);
-}
-
 class lambertian : public material {
  public:
   lambertian(texture* a) : albedo(a) {}
@@ -51,14 +50,11 @@ class lambertian : public material {
     }
     return consine / M_PI;
   }
-  virtual bool scatter(const ray& r_in, const hit_record& rec, vec3& alb,
-                       ray& scattered, float& pdf) const {
-    onb uvw;
-    uvw.build_from_w(rec.normal);
-    vec3 direction = uvw.local(random_cosine_direction());
-    scattered = ray(rec.p, unit_vector(direction), r_in.time());
-    alb = albedo->value(rec.u, rec.v, rec.p);
-    pdf = dot(uvw.w(), scattered.direction()) / M_PI;
+  bool scatter(const ray& r_in, const hit_record& hrec,
+               scatter_record& srec) const {
+    srec.is_specular = false;
+    srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+    srec.pdf_ptr = new cosine_pdf(hrec.normal);
     return true;
   }
   texture* albedo;
@@ -76,12 +72,14 @@ class metal : public material {
       fuzz = 1;
     }
   }
-  virtual bool scatter(const ray& r_in, const hit_record& rec,
-                       vec3& attenuation, ray& scattered) const {
-    vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-    scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere());
-    attenuation = albedo;
-    return (dot(scattered.direction(), rec.normal) > 0);
+  virtual bool scatter(const ray& r_in, const hit_record& hrec,
+                       scatter_record& srec) const {
+    vec3 reflected = reflect(unit_vector(r_in.direction()), hrec.normal);
+    srec.specular_ray = ray(hrec.p, reflected + fuzz * random_in_unit_sphere());
+    srec.attenuation = albedo;
+    srec.is_specular = true;
+    srec.pdf_ptr = 0;
+    return true;
   }
   vec3 albedo;
   float fuzz;
