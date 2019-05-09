@@ -124,17 +124,14 @@ void cornell_box(hitable** scene, camera** cam, float aspect) {
   material* light = new diffuse_light(new constant_texture(vec3(15, 15, 15)));
   list[i++] = new flip_normals(new yz_rect(0, 555, 0, 555, 555, green));
   list[i++] = new yz_rect(0, 555, 0, 555, 0, red);
-  list[i++] = new xz_rect(213, 343, 227, 332, 554, light);
+  list[i++] = new flip_normals(new xz_rect(213, 343, 227, 332, 554, light));
   list[i++] = new flip_normals(new xz_rect(0, 555, 0, 555, 555, white));
   list[i++] = new xz_rect(0, 555, 0, 555, 0, white);
   list[i++] = new flip_normals(new xy_rect(0, 555, 0, 555, 555, white));
+  material *glass = new dielectric(1.5);
+  list[i++] = new sphere(vec3(190, 90, 190),90 , glass);
   list[i++] = new translate(
-      new rotate_y(new box(vec3(0, 0, 0), vec3(165, 165, 165), white), -18),
-      vec3(130, 0, 65));
-
-  material* aluminum = new metal(vec3(0.8, 0.85, 0.88), 0.0);
-  list[i++] = new translate(
-      new rotate_y(new box(vec3(0, 0, 0), vec3(165, 330, 165), aluminum), 15),
+      new rotate_y(new box(vec3(0, 0, 0), vec3(165, 330, 165), white), 15),
       vec3(265, 0, 295));
   *scene = new hitable_list(list, i);
   vec3 lookfrom(278, 278, -800);
