@@ -1,2 +1,3 @@
 *.ppm
 main
+.DS_Store
