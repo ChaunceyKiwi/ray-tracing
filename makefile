@@ -5,4 +5,4 @@ make: main.cc
 	${CC} ${CFLAGS1} -o main main.cc
 
 clean:
-	rm main
+	rm main *.ppm
