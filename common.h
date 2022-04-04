@@ -26,7 +26,9 @@ inline double random_double(double min, double max) {
 }
 
 // Utility functions
-inline double degrees_to_radian(double degrees) { return degrees * pi / 180.0; }
+inline double degrees_to_radians(double degrees) {
+  return degrees * pi / 180.0;
+}
 
 inline double clamp(double x, double min, double max) {
   if (x < min) {

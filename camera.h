@@ -11,11 +11,12 @@ class camera {
   vec3 vertical;
 
  public:
-  camera() {
-    auto aspect_ratio = 16.0 / 9.0;
-    auto viewport_height = 2.0;
-    auto viewport_width = aspect_ratio * viewport_height;
+  camera(double vfov,  // vertical field-of-view in degress
+         double aspect_ratio) {
+    auto theta = degrees_to_radians(vfov);
     auto focal_length = 1.0;
+    auto viewport_height = 2.0 * tan(theta / 2) * focal_length;
+    auto viewport_width = aspect_ratio * viewport_height;
 
     origin = point3(0, 0, 0);
     horizontal = vec3(viewport_width, 0, 0);
